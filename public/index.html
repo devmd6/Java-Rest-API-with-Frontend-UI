@@ -1,1 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
 
+        #container {
+            display: flex;
+            justify-content: space-between;
+            width: 800px; /* Adjust the width as needed */
+        }
+
+        #formContainer,
+        #searchContainer {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 48%; /* Adjust the width as needed */
+        }
+
+        h1 {
+            text-align: center;
+            color: #333333;
+        }
+
+        form, .search {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        input, button {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        button.delete {
+            background-color: #f44336;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="formContainer">
+            <h1>Task Manager</h1>
+            <form id="taskForm">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+
+                <label for="id">ID:</label>
+                <input type="text" id="id" name="id" required>
+
+                <label for="assignee">Assignee:</label>
+                <input type="text" id="assignee" name="assignee" required>
+
+                <label for="project">Project:</label>
+                <input type="text" id="project" name="project" required>
+
+                <label for="startTime">Start Time:</label>
+                <input type="text" id="startTime" name="startTime" required>
+
+                <button type="button" onclick="createTask()">Create Task</button>
+            </form>
+        </div>
+
+        <div id="searchContainer">
+            <div class="search">
+                <h1>Search</h1>
+                <label for="searchName">Search by Name:</label>
+                <input type="text" id="searchName" name="searchName">
+                <button type="button" onclick="searchByName()">Search</button>
+            </div>
+
+            <div class="search">
+                <label for="searchAssignee">Search by Assignee:</label>
+                <input type="text" id="searchAssignee" name="searchAssignee">
+                <button type="button" onclick="searchByAssignee()">Search</button>
+            </div>
+
+            <div>
+                <h2>Tasks</h2>
+                <ul id="taskList"></ul>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        function createTask() {
+            const name = document.getElementById("name").value;
+            const id = document.getElementById("id").value;
+            const assignee = document.getElementById("assignee").value;
+            const project = document.getElementById("project").value;
+            const startTime = document.getElementById("startTime").value;
+
+            fetch("http://localhost:4500/api/v1/product/new", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name,
+                    id,
+                    assignee,
+                    project,
+                    startTime,
+                }),
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log(data);
+                    fetchTasks(); // Refresh the task list after creating a new task
+                })
+                .catch((error) => console.error("Error:", error));
+        }
+
+        function searchByName() {
+            const searchName = document.getElementById("searchName").value;
+
+            fetch(`http://localhost:4500/api/v1/products/searchByName/${searchName}`)
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log(data);
+                    displayTasks(data.products);
+                })
+                .catch((error) => console.error("Error:", error));
+        }
+
+        function searchByAssignee() {
+            const searchAssignee = document.getElementById("searchAssignee").value;
+
+            fetch(
+                `http://localhost:4500/api/v1/products/searchByAssignee/${searchAssignee}`
+            )
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log(data);
+                    displayTasks(data.products);
+                })
+                .catch((error) => console.error("Error:", error));
+        }
+
+        function deleteTask(taskId) {
+            fetch(`http://localhost:4500/api/v1/product/${taskId}`, {
+                method: "DELETE",
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log(data);
+                    fetchTasks(); // Refresh the task list after deleting a task
+                })
+                .catch((error) => console.error("Error:", error));
+        }
+
+        function fetchTasks() {
+            fetch("http://localhost:4500/api/v1/products")
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log(data);
+                    displayTasks(data.products);
+                })
+                .catch((error) => console.error("Error:", error));
+        }
+
+        function displayTasks(tasks) {
+            const taskList = document.getElementById("taskList");
+            taskList.innerHTML = "";
+
+            tasks.forEach((task) => {
+                const li = document.createElement("li");
+                li.textContent = `${task.name} - ${task.assignee} - `;
+
+                const deleteButton = document.createElement("button");
+                deleteButton.textContent = "Delete";
+                deleteButton.classList.add("delete");
+                deleteButton.addEventListener("click", () => deleteTask(task._id));
+
+                li.appendChild(deleteButton);
+                taskList.appendChild(li);
+            });
+        }
+
+        // Fetch and display existing tasks when the page loads
+        document.addEventListener("DOMContentLoaded", fetchTasks);
+    </script>
+</body>
+</html>
